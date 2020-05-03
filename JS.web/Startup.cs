@@ -12,6 +12,8 @@ using JS.web.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using JS.web.Models;
+using JS.web.Hubs;
 
 namespace JS.web
 {
@@ -30,8 +32,9 @@ namespace JS.web
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection")));
-            services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+            services.AddDefaultIdentity<AppIdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
+            services.AddSignalR();
             services.AddControllersWithViews();
             services.AddRazorPages();
         }
@@ -58,12 +61,14 @@ namespace JS.web
             app.UseAuthentication();
             app.UseAuthorization();
 
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
+                endpoints.MapHub<ChatHub>("/Chathub");
             });
         }
     }
