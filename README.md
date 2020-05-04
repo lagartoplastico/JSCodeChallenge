@@ -18,10 +18,13 @@
    - dotnet ef database update
    - dotnet run
 ### Register, Login and Chat.
-
 - Open a browser in https://localhost:5001
 - Register a user with a fake email. Don't forget to click confirm email link.
 - Login and click the tab named Chat.
 - Do the same in other browser.
 - Chat between browsers.
 - You can send stock=stock_code commands.
+
+### "JS.unitTest" Project Folder
+- Execute the following commands in Powershell or a terminal inside this folder path:
+   - dotnet test
