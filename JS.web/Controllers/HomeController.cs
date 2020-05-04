@@ -1,6 +1,7 @@
 ﻿using JS.web.Data;
 using JS.web.Hubs;
 using JS.web.Models;
+using JS.web.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -24,10 +25,9 @@ namespace JS.web.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly UserManager<AppIdentityUser> _userManager;
-        private readonly ApplicationDbContext _db;
         private readonly IHubContext<ChatHub> _hubContext;
         private readonly IConfiguration _config;
-        
+        private readonly IMessagesRepository _repo;
         private readonly string rabbitMQHost;
         private readonly string rabbitMQUser;
         private readonly string rabbitMQPass;
@@ -39,13 +39,13 @@ namespace JS.web.Controllers
 
 
         public HomeController(ILogger<HomeController> logger, UserManager<AppIdentityUser> userManager,
-                                ApplicationDbContext db, IHubContext<ChatHub> hubContext, IConfiguration config)
+            IHubContext<ChatHub> hubContext, IConfiguration config, IMessagesRepository repo)
         {
             _logger = logger;
             _userManager = userManager;
-            _db = db;
             _hubContext = hubContext;
             _config = config;
+            _repo = repo;
             rabbitMQHost = _config.GetSection("RabbitConnectionInfo:Host").Value;
             rabbitMQUser = _config.GetSection("RabbitConnectionInfo:User").Value;
             rabbitMQPass = _config.GetSection("RabbitConnectionInfo:Password").Value;
@@ -67,7 +67,7 @@ namespace JS.web.Controllers
             if (User.Identity.IsAuthenticated)
             {
                 ViewBag.CurrentUserName = currentUser.UserName;
-                IEnumerable<Message> messages = _db.Messages.ToList().TakeLast<Message>(50);
+                IEnumerable<Message> messages = _repo.RetrieveMessagesToShow();
 
                 return View(messages);
             }
@@ -81,8 +81,8 @@ namespace JS.web.Controllers
             if (ModelState.IsValid)
             {
                 string commandFilter = "/stock=";
-                if (message.Text.Length >= commandFilter.Length 
-                    && message.Text.Substring(0, commandFilter.Length) == commandFilter )
+                if (message.Text.Length >= commandFilter.Length
+                    && message.Text.Substring(0, commandFilter.Length) == commandFilter)
                 {
                     // The (decoupled) Bot API retrieves the stock information and put the formated message in the MQ. 
                     if (await SendToBotAPIAsync(message.Text.Substring(commandFilter.Length)))
@@ -92,11 +92,13 @@ namespace JS.web.Controllers
                 }
                 else
                 {
-                    var sender = await _userManager.GetUserAsync(User);
-                    message.UserId = sender.Id;
+                    if(_userManager != null)
+                    {
+                        var sender = await _userManager.GetUserAsync(User);
+                        message.UserId = sender.Id;
+                    }
                     message.Timestamp = DateTime.Now;
-                    await _db.Messages.AddAsync(message);
-                    await _db.SaveChangesAsync();
+                    await _repo.CreateAsync(message);
                 }
 
                 return Ok();
@@ -125,7 +127,7 @@ namespace JS.web.Controllers
                 else
                 {
                     _logger.LogWarning("Cannot retrieve from stock API");
-                    
+
                     await _hubContext.Clients.All.SendAsync("receiveMessage", new Message
                     {
                         Username = "Bot",
@@ -155,7 +157,7 @@ namespace JS.web.Controllers
         {
             try
             {
-                var factory = new ConnectionFactory() 
+                var factory = new ConnectionFactory()
                 { HostName = rabbitMQHost, UserName = rabbitMQUser, Password = rabbitMQPass };
 
                 using var connection = factory.CreateConnection();

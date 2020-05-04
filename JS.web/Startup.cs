@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using JS.web.Models;
 using JS.web.Hubs;
+using JS.web.Repositories;
 
 namespace JS.web
 {
@@ -35,6 +36,8 @@ namespace JS.web
             services.AddSignalR();
             services.AddControllersWithViews();
             services.AddRazorPages();
+
+            services.AddScoped<IMessagesRepository, MessagesRepository>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
