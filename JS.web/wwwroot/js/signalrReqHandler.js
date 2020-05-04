@@ -24,7 +24,6 @@ class Message {
 }
 
 function addMessageToChat(message) {
-    console.log(message)
     let isCurrentUserMessage = message.username === username;
     let container = document.createElement('div');
 
@@ -36,7 +35,6 @@ function addMessageToChat(message) {
         + d.getDate() + "/"
         + d.getFullYear() + " "
         + d.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true })
-    console.log(timestamp);
 
     let senderAndTime = document.createElement('p');
 
@@ -51,9 +49,8 @@ function addMessageToChat(message) {
     container.appendChild(senderAndTime);
     container.appendChild(text);
     chat.appendChild(container);
-    console.log(chat.childElementCount)
-    if (chat.childElementCount > 5) {
-        chat.removeChild(chat.children.item(1));
+    if (chat.childElementCount > 50) {
+        chat.removeChild(chat.children.item(0));
     }
 }
 

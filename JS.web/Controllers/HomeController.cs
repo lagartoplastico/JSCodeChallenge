@@ -67,7 +67,7 @@ namespace JS.web.Controllers
             if (User.Identity.IsAuthenticated)
             {
                 ViewBag.CurrentUserName = currentUser.UserName;
-                IEnumerable<Message> messages = _db.Messages.ToList().TakeLast<Message>(5);
+                IEnumerable<Message> messages = _db.Messages.ToList().TakeLast<Message>(50);
 
                 return View(messages);
             }
