@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using System;
@@ -14,10 +15,20 @@ namespace BotSotckProducer.Controllers
     public class StockBotController : ControllerBase
     {
         private readonly ILogger<StockBotController> _logger;
+        private IConfiguration _config;
+        private readonly string rabbitMQHost;
+        private readonly string rabbitMQUser;
+        private readonly string rabbitMQPass;
+        private readonly string rabbitMQQueueName;
 
-        public StockBotController(ILogger<StockBotController> logger)
+        public StockBotController(ILogger<StockBotController> logger, IConfiguration config)
         {
             _logger = logger;
+            _config = config;
+            rabbitMQHost = _config.GetSection("RabbitConnectionInfo:Host").Value;
+            rabbitMQUser = _config.GetSection("RabbitConnectionInfo:User").Value;
+            rabbitMQPass = _config.GetSection("RabbitConnectionInfo:Password").Value;
+            rabbitMQQueueName = _config.GetSection("RabbitConnectionInfo:QueueName").Value;
         }
 
         [HttpGet("{id}")]
@@ -94,14 +105,15 @@ namespace BotSotckProducer.Controllers
             {
                 var factory = new ConnectionFactory()
                 {
-                    HostName = Constants.HOST,
-                    UserName = Constants.USER,
-                    Password = Constants.PASSWORD
+                    HostName = rabbitMQHost,
+                    UserName = rabbitMQUser,
+                    Password = rabbitMQPass
+
                 };
                 using var connection = factory.CreateConnection();
                 using var channel = connection.CreateModel();
 
-                channel.QueueDeclare(queue: Constants.NAME_QUEUE,
+                channel.QueueDeclare(queue: rabbitMQQueueName,
                                 durable: true,
                                 exclusive: false,
                                 autoDelete: false,
@@ -113,7 +125,7 @@ namespace BotSotckProducer.Controllers
                 properties.Persistent = true;
 
                 channel.BasicPublish(exchange: "",
-                                  routingKey: Constants.NAME_QUEUE,
+                                  routingKey: rabbitMQQueueName,
                                   basicProperties: properties,
                                   body: body);
 

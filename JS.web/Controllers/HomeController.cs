@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -24,20 +25,33 @@ namespace JS.web.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly UserManager<AppIdentityUser> _userManager;
         private readonly ApplicationDbContext _db;
-        private const string NAME_QUEUE = "STOCKQUEUE";
-        private const string HOST = "localhost";
-        private const string USER = "guest";
-        private const string PASSWORD = "guest";
-
         private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IConfiguration _config;
+        
+        private readonly string rabbitMQHost;
+        private readonly string rabbitMQUser;
+        private readonly string rabbitMQPass;
+        private readonly string rabbitMQQueueName;
+
+        private readonly string botHost;
+        private readonly string botPort;
+
+
 
         public HomeController(ILogger<HomeController> logger, UserManager<AppIdentityUser> userManager,
-                                ApplicationDbContext db, IHubContext<ChatHub> hubContext)
+                                ApplicationDbContext db, IHubContext<ChatHub> hubContext, IConfiguration config)
         {
             _logger = logger;
             _userManager = userManager;
             _db = db;
             _hubContext = hubContext;
+            _config = config;
+            rabbitMQHost = _config.GetSection("RabbitConnectionInfo:Host").Value;
+            rabbitMQUser = _config.GetSection("RabbitConnectionInfo:User").Value;
+            rabbitMQPass = _config.GetSection("RabbitConnectionInfo:Password").Value;
+            rabbitMQQueueName = _config.GetSection("RabbitConnectionInfo:QueueName").Value;
+            botHost = _config.GetSection("botEndpoint:Host").Value;
+            botPort = _config.GetSection("botEndpoint:Port").Value;
         }
 
         public IActionResult Index()
@@ -99,7 +113,7 @@ namespace JS.web.Controllers
 
         private async Task<bool> SendToBotAPIAsync(string stockCode)
         {
-            string url = "https://localhost:44323/StockBot/" + stockCode;
+            string url = $"https://{botHost}:{botPort}/StockBot/{stockCode}";
             try
             {
                 using HttpClient httpClient = new HttpClient();
@@ -141,12 +155,13 @@ namespace JS.web.Controllers
         {
             try
             {
-                var factory = new ConnectionFactory() { HostName = HOST, UserName = USER, Password = PASSWORD };
+                var factory = new ConnectionFactory() 
+                { HostName = rabbitMQHost, UserName = rabbitMQUser, Password = rabbitMQPass };
 
                 using var connection = factory.CreateConnection();
                 using var channel = connection.CreateModel();
 
-                channel.QueueDeclare(queue: NAME_QUEUE, durable: true, exclusive: false,
+                channel.QueueDeclare(queue: rabbitMQQueueName, durable: true, exclusive: false,
                     autoDelete: false, arguments: null);
 
                 channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
@@ -157,7 +172,7 @@ namespace JS.web.Controllers
 
                 consumer.Received += CallBackRecievedMessage;
 
-                channel.BasicConsume(queue: NAME_QUEUE, autoAck: false, consumer: consumer);
+                channel.BasicConsume(queue: rabbitMQQueueName, autoAck: false, consumer: consumer);
 
                 Thread.Sleep(1000);
 

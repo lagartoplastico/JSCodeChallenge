@@ -11,7 +11,6 @@ namespace BotSotckProducer
     {
         public Startup(IConfiguration configuration)
         {
-            Console.WriteLine("StartUp");
             Configuration = configuration;
         }
 
@@ -19,13 +18,11 @@ namespace BotSotckProducer
 
         public void ConfigureServices(IServiceCollection services)
         {
-            Console.WriteLine("Configure Service");
             services.AddControllers();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            Console.WriteLine("Configure");
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
