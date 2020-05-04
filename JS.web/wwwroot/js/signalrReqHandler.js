@@ -13,6 +13,7 @@ const username = userName; // userName is declared in razor view.
 const textInput = document.getElementById('messageText');
 const chat = document.getElementById('chat');
 const messagesQueue = [];
+const commandFilter = '/stock=';
 
 class Message {
     constructor(username, text, timestamp) {
@@ -63,7 +64,8 @@ function clearInputField() {
 
 function sendMessage() {
     let text = messagesQueue.shift() || "";
-    if (text.trim() === "") return;
+
+    if (text.trim() === "" || text.startsWith(commandFilter)) return;
 
     let timestamp = new Date();
     let message = new Message(username, text, timestamp);

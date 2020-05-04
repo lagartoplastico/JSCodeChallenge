@@ -65,7 +65,7 @@ namespace BotSotckProducer.Controllers
                 lastline = line;
             }
 
-            string message = null;
+            string message;
 
             if (String.IsNullOrWhiteSpace(lastline))
             {
@@ -74,6 +74,10 @@ namespace BotSotckProducer.Controllers
             else
             {
                 var data = lastline.Split(',');
+                if (data[4] == "N/D")
+                {
+                    return false;
+                }
                 message = $"{data[0]} quote is ${data[4]} per share";
             }
 
